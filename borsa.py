@@ -131,6 +131,7 @@ class BistAnalizUygulamasi:
         button_frame.grid(row=0, column=4, columnspan=5, padx=10)
 
         ttk.Button(button_frame, text="Analiz Et", command=self.analiz_et).pack(side=tk.LEFT, padx=3)
+        ttk.Button(button_frame, text="Derinlik", command=self.show_depth_window).pack(side=tk.LEFT, padx=3)
         ttk.Button(button_frame, text="Çizgi Grafik", command=self.grafik_goster).pack(side=tk.LEFT, padx=3)
         ttk.Button(button_frame, text="Mum Grafiği", command=self.mum_grafigi_goster).pack(side=tk.LEFT, padx=3)
         ttk.Button(button_frame, text="Temizle", command=self.temizle).pack(side=tk.LEFT, padx=3)
@@ -1258,9 +1259,9 @@ class BistAnalizUygulamasi:
                 'EMA_20': son['EMA_20'],
                 'Volume': son['Volume']
             }
-            
+
             ai_analysis = self.ai_analyzer.analyze_stock(stock_data, temel)
-            
+
             if 'error' not in ai_analysis:
                 analiz += "\n\n🤖 YAPAY ZEKA ANALİZLERİ:\n"
                 for uzman, yorum in ai_analysis.items():
@@ -1283,7 +1284,7 @@ class BistAnalizUygulamasi:
         if not search_term:
             combo['values'] = self.hisse_listesi
             return
-            
+
         filtered_list = [hisse for hisse in self.hisse_listesi if search_term in hisse][:10]
         if filtered_list:
             combo['values'] = filtered_list
@@ -1293,31 +1294,52 @@ class BistAnalizUygulamasi:
     def filter_hisse_listesi(self, *args):
         if not hasattr(self, '_filter_timer'):
             self._filter_timer = None
-            
+
         # Mevcut zamanlayıcıyı iptal et
         if self._filter_timer:
             self.root.after_cancel(self._filter_timer)
-        
+
         def do_filter():
             search_term = self.hisse_var.get().upper()
             if not search_term:
                 self.hisse_dropdown['values'] = self.hisse_listesi
                 return
-                
+
             # Hızlı filtreleme
             filtered_list = [h for h in self.hisse_listesi if h.startswith(search_term)][:10]
-            
+
             # Eğer başlangıç eşleşmesi yoksa, içeren aramayı yap
             if not filtered_list:
                 filtered_list = [h for h in self.hisse_listesi if search_term in h][:10]
-            
+
             if filtered_list:
                 self.hisse_dropdown['values'] = filtered_list
                 if len(filtered_list) < 10:
                     self.hisse_dropdown.event_generate('<Down>')
-        
+
         # 150ms sonra filtrelemeyi yap
         self._filter_timer = self.root.after(150, do_filter)
+
+    def show_depth_window(self):
+        hisse_kodu = self.hisse_var.get().strip().upper()
+        if not hisse_kodu:
+            messagebox.showwarning("Uyarı", "Lütfen bir hisse kodu seçin")
+            return
+            
+        depth_window = tk.Toplevel(self.root)
+        depth_window.title(f"{hisse_kodu} Derinlik Analizi")
+        depth_window.geometry("800x600")
+        
+        from depth_analysis import DepthAnalysisApp
+        DepthAnalysisApp(depth_window, hisse_kodu)
+
+        def auto_update():
+            """Her 30 saniyede bir derinlik verilerini günceller"""
+            if depth_window.winfo_exists():
+                DepthAnalysisApp(depth_window, hisse_kodu)
+                depth_window.after(30000, auto_update)
+                
+        depth_window.after(30000, auto_update)
 
 if __name__ == "__main__":
     root = tk.Tk()
